@@ -26,10 +26,12 @@ struct ReviewView: View {
                             .foregroundStyle(palette.muted)
                     }
                     Spacer()
+                    undoControl
+
                     VStack(alignment: .trailing, spacing: 3) {
                         Text("\(model.assetCount)")
                             .font(.system(.title3, design: .monospaced).weight(.bold))
-                            .foregroundStyle(palette.yellow)
+                            .foregroundStyle(palette.cyan)
                         Text("MEDIA ITEMS")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .tracking(1)
@@ -38,18 +40,29 @@ struct ReviewView: View {
                 }
                 .padding(.horizontal, 16)
 
-                if !model.previewAssets.isEmpty {
-                    upcomingPreview
-                }
+                ZStack {
+                    // Future items sit behind the active card. Their edges and
+                    // thumbnails peek out to communicate the review order.
+                    ForEach(Array(model.previewAssets.enumerated().reversed()), id: \.element.localIdentifier) { entry in
+                        FutureDeckCard(asset: entry.element, number: entry.offset + 1, palette: palette)
+                            .padding(.horizontal, CGFloat(entry.offset + 1) * 9)
+                            .offset(y: CGFloat(entry.offset + 1) * 10)
+                            .scaleEffect(1 - CGFloat(entry.offset + 1) * 0.018, anchor: .top)
+                            .zIndex(Double(3 - entry.offset))
+                    }
 
-                PhotoSwipeCard(
-                    asset: asset,
-                    onKeep: { Task { await model.keep(asset) } },
-                    onDelete: { Task { await model.queueForDeletion(asset) } }
-                )
-                .id(asset.localIdentifier)
-                .padding(.horizontal, 14)
-                .frame(maxHeight: .infinity)
+                    PhotoSwipeCard(
+                        asset: asset,
+                        onKeep: { Task { await model.keep(asset) } },
+                        onDelete: { Task { await model.queueForDeletion(asset) } }
+                    )
+                    .id(asset.localIdentifier)
+                    .padding(.horizontal, 14)
+                    .zIndex(10)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                .padding(.bottom, 8)
 
                 HStack(spacing: 12) {
                     actionButton(
@@ -88,78 +101,26 @@ struct ReviewView: View {
         .background(palette.backdrop.ignoresSafeArea())
     }
 
-    /// Three upcoming media items displayed as a vertical deck, not a carousel.
-    private var upcomingPreview: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 7) {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .foregroundStyle(palette.magenta)
-                Text("UP NEXT // DECK")
-                    .foregroundStyle(palette.cyan)
-                Spacer()
-                Text("\(model.previewAssets.count) QUEUED")
-                    .foregroundStyle(palette.muted)
+    private var undoControl: some View {
+        Button {
+            Task { await model.undoLastReviewAction() }
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(model.canUndoReviewAction ? palette.yellow : palette.muted.opacity(0.35))
+                Text(model.canUndoReviewAction ? "UNDO \(model.undoReviewActionCount)" : "UNDO")
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .tracking(0.7)
+                    .foregroundStyle(model.canUndoReviewAction ? palette.yellow : palette.muted.opacity(0.45))
             }
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .tracking(1.1)
-
-            VStack(spacing: 5) {
-                ForEach(Array(model.previewAssets.enumerated()), id: \.element.localIdentifier) { index, asset in
-                    HStack(spacing: 10) {
-                        ZStack(alignment: .topLeading) {
-                            PhotoThumbnail(asset: asset, contentMode: .fill)
-                                .frame(width: 92, height: 56)
-                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                            Text(String(format: "%02d", index + 1))
-                                .font(.system(size: 9, weight: .black, design: .monospaced))
-                                .foregroundStyle(Color.black)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 3)
-                                .background(palette.yellow, in: RoundedRectangle(cornerRadius: 4))
-                                .padding(3)
-                            if asset.mediaType == .video {
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(4)
-                                    .background(.black.opacity(0.72), in: Circle())
-                                    .frame(width: 92, height: 56, alignment: .center)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(asset.mediaType == .video ? "VIDEO FILE" : asset.mediaType == .audio ? "AUDIO FILE" : "PHOTO FILE")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .tracking(0.8)
-                                .foregroundStyle(asset.mediaType == .video ? palette.magenta : palette.cyan)
-                            Text(asset.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? "DATE UNKNOWN")
-                                .font(.caption2)
-                                .foregroundStyle(palette.muted)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(palette.muted.opacity(0.8))
-                    }
-                    .padding(6)
-                    .background(palette.raisedSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(palette.outline.opacity(1 - Double(index) * 0.18), lineWidth: 1)
-                    )
-                    .padding(.leading, CGFloat(index) * 3)
-                    .padding(.trailing, CGFloat(2 - index) * 3)
-                }
-            }
+            .frame(width: 58, height: 46)
+            .background(palette.raisedSurface.opacity(0.8), in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(palette.yellow.opacity(model.canUndoReviewAction ? 0.7 : 0.2), lineWidth: 1))
         }
-        .padding(9)
-        .background(palette.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LinearGradient(colors: [palette.cyan.opacity(0.55), palette.magenta.opacity(0.30)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-        )
-        .padding(.horizontal, 14)
+        .buttonStyle(.plain)
+        .disabled(!model.canUndoReviewAction)
+        .accessibilityLabel(model.nextUndoDescription)
     }
 
     private var accessMessage: some View {
@@ -189,6 +150,10 @@ struct ReviewView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
+            if model.canUndoReviewAction {
+                undoControl
+                    .padding(.bottom, 8)
+            }
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(palette.green)
@@ -240,6 +205,44 @@ struct ReviewView: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.75), lineWidth: 1.2))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct FutureDeckCard: View {
+    let asset: PHAsset
+    let number: Int
+    let palette: CyberpunkPalette
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            PhotoThumbnail(asset: asset, contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(palette.raisedSurface)
+
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.75)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+
+            HStack(spacing: 6) {
+                Text("UP NEXT 0\(number)")
+                    .font(.system(size: 9, weight: .black, design: .monospaced))
+                    .tracking(1)
+                    .foregroundStyle(palette.yellow)
+                Text(asset.mediaType == .video ? "VIDEO" : "PHOTO")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding(12)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(palette.cyan.opacity(0.7), lineWidth: 1.2)
+        )
+        .shadow(color: palette.magenta.opacity(0.13), radius: 12, y: 7)
+        .allowsHitTesting(false)
     }
 }
 
