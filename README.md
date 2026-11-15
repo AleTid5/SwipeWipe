@@ -8,7 +8,7 @@ A private, native SwiftUI media-review app. It uses Apple's Photos framework and
 - Default review order is **oldest to newest**. Settings lets the user switch to **newest to oldest**.
 - Swipe right / Keep: marks an item as kept and removes it from the normal review flow.
 - Swipe left / Delete: queues an item for deletion.
-- Displays a preview strip of the next three eligible items to help the user review faster.
+- Displays the next three eligible items as a numbered vertical preview deck (one above another), rather than a horizontal carousel.
 - Videos can be opened in an in-app video player before deciding whether to keep or delete them.
 - Uses a rolling in-memory window of at most 30 `PHAsset` objects. The Photos fetch result is queried in chunks; the app does not materialize the whole library as an array.
 - Duplicate scanning also processes assets in chunks of 30 rather than retaining all PhotoKit assets at once. Resource bytes are hashed incrementally to avoid buffering a full video in memory.
@@ -22,6 +22,8 @@ A private, native SwiftUI media-review app. It uses Apple's Photos framework and
 - Exact duplicate scan based on SHA-256 hashes of original PhotoKit resources. It is byte-for-byte matching, not visual similarity matching.
 - Duplicate groups preselect extra copies, allow manual selection, and support bulk queueing.
 - Review state, settings, and pending deletion deadlines persist locally using UserDefaults.
+- Cyberpunk-inspired neon interface applied across Review, Delete Queue, Duplicates, Settings, navigation bars, and tab bar.
+- Settings lets users switch between Dark and Light cyberpunk palettes. Dark is the default; the choice persists locally.
 - Settings footer credits: “Developed with ❤️ by Alejandro Tidele” and links to https://atidele.dev.
 - Original cyberpunk SwipeWipe app icon is preserved in the asset catalog.
 
@@ -37,6 +39,10 @@ A private, native SwiftUI media-review app. It uses Apple's Photos framework and
 For personal installation, Xcode can sign the app with a free Apple Account. Free provisioning has a short validity period (commonly seven days), so you may need to run it from Xcode again to refresh the installation. A paid Apple Developer Program membership gives longer-lived development signing.
 
 ## Important behavior and limitations
+
+### Appearance and review deck
+
+The default appearance is a dark cyberpunk control-deck theme with cyan, magenta, and yellow accents. The Interface section in Settings switches the entire app between Dark and Light palettes; the selection is stored in UserDefaults under `swipewipe.appearanceMode`. The three upcoming media items are displayed vertically as a numbered stack of thumbnail cards, not side-by-side.
 
 ### Chunked loading
 

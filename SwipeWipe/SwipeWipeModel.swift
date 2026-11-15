@@ -100,6 +100,9 @@ final class SwipeWipeModel: ObservableObject {
     @Published private(set) var isScanningDuplicates = false
     @Published private(set) var duplicateScanProgress = 0.0
     @Published private(set) var duplicateScanSkippedCount = 0
+    @Published private(set) var duplicateScanScanned = 0
+    @Published private(set) var duplicateScanTotal = 0
+    private var isDuplicateScanCancelled = false
 
     private enum Keys {
         static let pendingDeletes = "swipewipe.pendingDeletes.v1"
@@ -441,8 +444,11 @@ final class SwipeWipeModel: ObservableObject {
     func scanExactDuplicates() async {
         guard !isScanningDuplicates else { return }
         isScanningDuplicates = true
+        isDuplicateScanCancelled = false
         duplicateScanProgress = 0
         duplicateScanSkippedCount = 0
+        duplicateScanScanned = 0
+        duplicateScanTotal = 0
         duplicateGroups = []
         duplicateSelection = []
         defer { isScanningDuplicates = false }
@@ -453,11 +459,18 @@ final class SwipeWipeModel: ObservableObject {
         )
         let queuedIDs = Set(pendingDeletes.map(\.assetID))
         let total = scanResult.count
+        duplicateScanTotal = total
         var buckets: [String: [String]] = [:]
         var scanned = 0
 
         // Scan in 30-asset batches. This avoids retaining the entire library in memory.
         while scanned < total {
+            if isDuplicateScanCancelled {
+                duplicateGroups = []
+                duplicateSelection = []
+                statusMessage = "Scan cancelled."
+                return
+            }
             let chunk = photoLibrary.fetchChunk(from: scanResult, startIndex: scanned, limit: chunkSize)
             guard !chunk.isEmpty else { break }
             scanned += chunk.count
@@ -469,6 +482,7 @@ final class SwipeWipeModel: ObservableObject {
                     duplicateScanSkippedCount += 1
                 }
             }
+            duplicateScanScanned = scanned
             duplicateScanProgress = Double(scanned) / Double(max(total, 1))
             await Task.yield()
         }
@@ -482,6 +496,11 @@ final class SwipeWipeModel: ObservableObject {
         statusMessage = groups.isEmpty
             ? "No exact duplicate media files were found in the selected date range."
             : "Found \(groups.count) groups of exact duplicate media files. Review the preselected copies before queuing removal."
+    }
+
+    /// Request cancellation of the running duplicate scan; partial results are discarded.
+    func cancelDuplicateScan() {
+        isDuplicateScanCancelled = true
     }
 
     func queueSelectedDuplicates() async {
