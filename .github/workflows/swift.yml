@@ -1,0 +1,76 @@
+
+name: SwipeWipe iOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Give the workflow only the permissions it needs.
+permissions:
+  contents: read
+
+# Cancel older builds when a newer commit arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Find Xcode project
+        id: project
+        shell: bash
+        run: |
+          PROJECT_PATH=$(find . -maxdepth 5 \
+            -type d -name "SwipeWipe.xcodeproj" \
+            -print -quit)
+
+          if [ -z "$PROJECT_PATH" ]; then
+            echo "::error::SwipeWipe.xcodeproj not found"
+            exit 1
+          fi
+
+          echo "project_path=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Check Xcode version and schemes
+        env:
+          PROJECT_PATH: ${{ steps.project.outputs.project_path }}
+        run: |
+          xcodebuild -version
+          xcodebuild -list -project "$PROJECT_PATH"
+
+      - name: Build for iOS Simulator
+        env:
+          PROJECT_PATH: ${{ steps.project.outputs.project_path }}
+        run: |
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -scheme SwipeWipe \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Static analysis
+        env:
+          PROJECT_PATH: ${{ steps.project.outputs.project_path }}
+        run: |
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -scheme SwipeWipe \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            analyze
