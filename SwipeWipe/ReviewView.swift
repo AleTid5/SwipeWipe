@@ -4,6 +4,8 @@ import SwiftUI
 
 struct ReviewView: View {
     @EnvironmentObject private var model: SwipeWipeModel
+    @Environment(\.colorScheme) private var colorScheme
+    private var palette: CyberpunkPalette { CyberpunkPalette(colorScheme: colorScheme) }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -11,19 +13,30 @@ struct ReviewView: View {
                 accessMessage
             } else if let asset = model.currentAsset {
                 HStack {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("MEDIA CLEANUP // LIVE")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .tracking(1.4)
+                            .foregroundStyle(palette.cyan)
                         Text("Your camera roll")
-                            .font(.headline)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(palette.text)
                         Text("\(model.remainingCount) left in this round")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.muted)
                     }
                     Spacer()
-                    Text("\(model.assetCount) items")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text("\(model.assetCount)")
+                            .font(.system(.title3, design: .monospaced).weight(.bold))
+                            .foregroundStyle(palette.yellow)
+                        Text("MEDIA ITEMS")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .tracking(1)
+                            .foregroundStyle(palette.muted)
+                    }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 16)
 
                 if !model.previewAssets.isEmpty {
                     upcomingPreview
@@ -38,24 +51,25 @@ struct ReviewView: View {
                 .padding(.horizontal, 14)
                 .frame(maxHeight: .infinity)
 
-                HStack(spacing: 28) {
+                HStack(spacing: 12) {
                     actionButton(
-                        title: "Delete",
-                        subtitle: "Swipe left",
+                        title: "DELETE",
+                        subtitle: "SWIPE LEFT",
                         symbol: "trash",
-                        color: .red
+                        color: palette.red
                     ) {
                         Task { await model.queueForDeletion(asset) }
                     }
                     actionButton(
-                        title: "Keep",
-                        subtitle: "Swipe right",
+                        title: "KEEP",
+                        subtitle: "SWIPE RIGHT",
                         symbol: "heart.fill",
-                        color: .green
+                        color: palette.green
                     ) {
                         Task { await model.keep(asset) }
                     }
                 }
+                .padding(.horizontal, 14)
                 .padding(.bottom, 8)
             } else {
                 emptyState
@@ -64,67 +78,105 @@ struct ReviewView: View {
             if let message = model.statusMessage {
                 Text(message)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.muted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                     .padding(.bottom, 4)
             }
         }
-        .navigationTitle("SwipeWipe")
-        .navigationBarTitleDisplayMode(.inline)
-        .background(Color(uiColor: .systemGroupedBackground))
+        .toolbar(.hidden, for: .navigationBar)
+        .background(palette.backdrop.ignoresSafeArea())
     }
 
+    /// Three upcoming media items displayed as a vertical deck, not a carousel.
     private var upcomingPreview: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("UP NEXT")
-                .font(.caption2.weight(.bold))
-                .tracking(1.1)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 2)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 7) {
+                Image(systemName: "square.stack.3d.up.fill")
+                    .foregroundStyle(palette.magenta)
+                Text("UP NEXT // DECK")
+                    .foregroundStyle(palette.cyan)
+                Spacer()
+                Text("\(model.previewAssets.count) QUEUED")
+                    .foregroundStyle(palette.muted)
+            }
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .tracking(1.1)
 
-            HStack(spacing: 8) {
+            VStack(spacing: 5) {
                 ForEach(Array(model.previewAssets.enumerated()), id: \.element.localIdentifier) { index, asset in
-                    VStack(spacing: 3) {
-                        ZStack(alignment: .topTrailing) {
+                    HStack(spacing: 10) {
+                        ZStack(alignment: .topLeading) {
                             PhotoThumbnail(asset: asset, contentMode: .fill)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 58)
-                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                .frame(width: 92, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            Text(String(format: "%02d", index + 1))
+                                .font(.system(size: 9, weight: .black, design: .monospaced))
+                                .foregroundStyle(Color.black)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 3)
+                                .background(palette.yellow, in: RoundedRectangle(cornerRadius: 4))
+                                .padding(3)
                             if asset.mediaType == .video {
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.white)
-                                    .padding(5)
-                                    .background(.black.opacity(0.65), in: Circle())
                                     .padding(4)
+                                    .background(.black.opacity(0.72), in: Circle())
+                                    .frame(width: 92, height: 56, alignment: .center)
                             }
                         }
-                        Text("\(index + 1)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(asset.mediaType == .video ? "VIDEO FILE" : asset.mediaType == .audio ? "AUDIO FILE" : "PHOTO FILE")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .tracking(0.8)
+                                .foregroundStyle(asset.mediaType == .video ? palette.magenta : palette.cyan)
+                            Text(asset.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? "DATE UNKNOWN")
+                                .font(.caption2)
+                                .foregroundStyle(palette.muted)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(palette.muted.opacity(0.8))
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(6)
+                    .background(palette.raisedSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(palette.outline.opacity(1 - Double(index) * 0.18), lineWidth: 1)
+                    )
+                    .padding(.leading, CGFloat(index) * 3)
+                    .padding(.trailing, CGFloat(2 - index) * 3)
                 }
             }
         }
-        .padding(.horizontal)
+        .padding(9)
+        .background(palette.surface.opacity(0.92), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(LinearGradient(colors: [palette.cyan.opacity(0.55), palette.magenta.opacity(0.30)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+        .padding(.horizontal, 14)
     }
 
     private var accessMessage: some View {
         VStack(spacing: 14) {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 44))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.cyan)
             Text("Access your photos")
                 .font(.title2.bold())
             Text("SwipeWipe needs read/write Photos access to show your pictures and remove the ones you choose. With Limited Access, only selected photos are available.")
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.muted)
             Button("Allow photo access") {
                 Task { await model.loadPhotos() }
             }
             .buttonStyle(.borderedProminent)
+            .tint(palette.cyan)
             if model.authorizationStatus == .denied || model.authorizationStatus == .restricted {
                 Text("You can change access in Settings → Privacy & Security → Photos → SwipeWipe.")
                     .font(.caption)
@@ -139,19 +191,20 @@ struct ReviewView: View {
         VStack(spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(.green)
+                .foregroundStyle(palette.green)
             Text("You're all caught up")
                 .font(.title2.bold())
             Text(model.showKeptAgain
                  ? "You've reviewed every item in this round. Start another round to see them again."
                  : "No more unseen items match your date filter. Kept items stay out of the queue unless you enable them in Settings.")
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.muted)
             if model.showKeptAgain {
                 Button("Start another round") {
                     model.startNewRound()
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(palette.cyan)
             }
         }
         .padding(28)
@@ -166,16 +219,25 @@ struct ReviewView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 5) {
+            HStack(spacing: 9) {
                 Image(systemName: symbol)
-                    .font(.title2.bold())
-                    .frame(width: 62, height: 62)
-                    .background(color.opacity(0.13), in: Circle())
+                    .font(.title3.weight(.black))
                     .foregroundStyle(color)
-                Text(title).font(.headline)
-                Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .tracking(1.1)
+                        .foregroundStyle(palette.text)
+                    Text(subtitle)
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(palette.muted)
+                }
+                Spacer(minLength: 0)
             }
-            .frame(minWidth: 100)
+            .padding(.horizontal, 13)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(color.opacity(palette.isDark ? 0.12 : 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.75), lineWidth: 1.2))
         }
         .buttonStyle(.plain)
     }
@@ -188,6 +250,8 @@ private struct PhotoSwipeCard: View {
 
     @State private var offset: CGSize = .zero
     @State private var showVideoPlayer = false
+    @Environment(\.colorScheme) private var colorScheme
+    private var palette: CyberpunkPalette { CyberpunkPalette(colorScheme: colorScheme) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -218,11 +282,11 @@ private struct PhotoSwipeCard: View {
 
                 HStack {
                     if offset.width < -35 {
-                        stamp("DELETE", color: .red)
+                        stamp("DELETE", color: palette.red)
                         Spacer()
                     } else if offset.width > 35 {
                         Spacer()
-                        stamp("KEEP", color: .green)
+                        stamp("KEEP", color: palette.green)
                     }
                 }
                 .padding(18)
@@ -259,11 +323,15 @@ private struct PhotoSwipeCard: View {
                 }
             }
             .padding(14)
-            .background(.regularMaterial)
+            .background(palette.raisedSurface)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.quaternary, lineWidth: 1))
-        .shadow(color: .black.opacity(0.12), radius: 14, y: 7)
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(LinearGradient(colors: [palette.cyan.opacity(0.75), palette.magenta.opacity(0.42)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.4)
+        )
+        .shadow(color: palette.cyan.opacity(palette.isDark ? 0.12 : 0.08), radius: 14, y: 7)
         .offset(x: offset.width, y: offset.height * 0.15)
         .rotationEffect(.degrees(Double(offset.width / 22)))
         .gesture(
