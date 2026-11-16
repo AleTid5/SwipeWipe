@@ -91,10 +91,10 @@ struct DuplicatesView: View {
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .tracking(1.4)
                 .foregroundStyle(palette.cyan)
-            Text("Find exact duplicate media files")
+            Text("Find duplicates and similar captures")
                 .font(.headline.weight(.bold))
                 .foregroundStyle(palette.text)
-            Text("Compares the original media bytes on your device. Nothing is uploaded. iCloud-only originals are skipped unless already downloaded.")
+            Text("Finds exact file matches and visually similar photos captured within 60 seconds using Apple Vision. Similarity is a heuristic, not a duplicate guarantee — review every suggested removal. Analysis stays on-device; iCloud-only items may be skipped.")
                 .font(.footnote)
                 .foregroundStyle(palette.muted)
 
@@ -111,7 +111,7 @@ struct DuplicatesView: View {
                 .tint(palette.red)
             } else {
                 Button {
-                    Task { await model.scanExactDuplicates() }
+                    Task { await model.scanDuplicates() }
                 } label: {
                     HStack(spacing: 9) {
                         Image(systemName: "sparkles.magnifyingglass")
@@ -122,7 +122,7 @@ struct DuplicatesView: View {
                                 .font(.system(size: 12, weight: .black, design: .monospaced))
                                 .tracking(1.1)
                                 .foregroundStyle(palette.text)
-                            Text("EXACT BYTE MATCH // ON-DEVICE")
+                            Text("EXACT HASH + VISION SIMILARITY")
                                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(palette.muted)
                         }
@@ -175,10 +175,12 @@ struct DuplicatesView: View {
     private func duplicateGroupCard(_ group: DuplicateGroup, groupIndex: Int) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("GROUP \(String(format: "%02d", groupIndex + 1)) · \(group.assetIDs.count) IDENTICAL")
+                Text(group.kind == .exact
+                     ? "GROUP \(String(format: "%02d", groupIndex + 1)) · \(group.assetIDs.count) EXACT MATCH"
+                     : "GROUP \(String(format: "%02d", groupIndex + 1)) · \(group.assetIDs.count) SIMILAR CAPTURES")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .tracking(1)
-                    .foregroundStyle(palette.magenta)
+                    .foregroundStyle(group.kind == .exact ? palette.magenta : palette.cyan)
                 Spacer()
                 Menu {
                     Button("Keep one") { setGroup(group, selected: false, exceptFirst: true) }
@@ -195,13 +197,23 @@ struct DuplicatesView: View {
 
             ForEach(Array(group.assetIDs.enumerated()), id: \.element) { copyIndex, identifier in
                 if let asset = model.asset(with: identifier) {
-                    duplicateRow(asset: asset, isSuggestedOriginal: copyIndex == 0, identifier: identifier)
+                    duplicateRow(
+                        asset: asset,
+                        isSuggestedOriginal: copyIndex == 0,
+                        identifier: identifier,
+                        groupKind: group.kind
+                    )
                 }
             }
         }
     }
 
-    private func duplicateRow(asset: PHAsset, isSuggestedOriginal: Bool, identifier: String) -> some View {
+    private func duplicateRow(
+        asset: PHAsset,
+        isSuggestedOriginal: Bool,
+        identifier: String,
+        groupKind: DuplicateGroupKind
+    ) -> some View {
         let isSelected = model.duplicateSelection.contains(identifier)
         return Button {
             model.setDuplicateSelected(identifier, selected: !isSelected)
@@ -220,10 +232,14 @@ struct DuplicatesView: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(isSuggestedOriginal ? "SUGGESTED ORIGINAL" : "EXACT COPY")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .tracking(0.8)
-                        .foregroundStyle(isSuggestedOriginal ? palette.green : palette.magenta)
+                    Text(
+                        isSuggestedOriginal
+                            ? "SUGGESTED ORIGINAL"
+                            : groupKind == .exact ? "EXACT COPY" : "VISUALLY SIMILAR"
+                    )
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundStyle(isSuggestedOriginal ? palette.green : (groupKind == .exact ? palette.magenta : palette.cyan))
                     Text(asset.creationDate?.formatted(date: .abbreviated, time: .shortened) ?? "DATE UNKNOWN")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(palette.muted)
@@ -274,7 +290,7 @@ struct DuplicatesView: View {
                 .font(.system(size: 13, weight: .black, design: .monospaced))
                 .tracking(1.4)
                 .foregroundStyle(palette.text)
-            Text("Run a scan to find exact duplicate media files in your selected date range.")
+            Text("Run a scan to find exact matches and visually similar photos captured close together in your selected date range.")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(palette.muted)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A1000000000000000000000B /* ReviewActionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* ReviewActionHistory.swift */; };
 		A10000000000000000000001 /* SwipeWipeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* SwipeWipeApp.swift */; };
 		A10000000000000000000002 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* PhotoLibraryService.swift */; };
 		A10000000000000000000003 /* SwipeWipeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SwipeWipeModel.swift */; };
@@ -20,6 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        B1000000000000000000000B /* ReviewActionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewActionHistory.swift; sourceTree = "<group>"; };
 		B10000000000000000000001 /* SwipeWipeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeWipeApp.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryService.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* SwipeWipeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeWipeModel.swift; sourceTree = "<group>"; };
@@ -58,6 +60,7 @@
 				B10000000000000000000001 /* SwipeWipeApp.swift */,
 				B10000000000000000000002 /* PhotoLibraryService.swift */,
 				B10000000000000000000003 /* SwipeWipeModel.swift */,
+				B1000000000000000000000B /* ReviewActionHistory.swift */,
 				B10000000000000000000004 /* PhotoThumbnail.swift */,
 				B10000000000000000000005 /* ContentView.swift */,
 				B10000000000000000000006 /* ReviewView.swift */,
@@ -139,6 +142,7 @@
 				A10000000000000000000001 /* SwipeWipeApp.swift in Sources */,
 				A10000000000000000000002 /* PhotoLibraryService.swift in Sources */,
 				A10000000000000000000003 /* SwipeWipeModel.swift in Sources */,
+				A1000000000000000000000B /* ReviewActionHistory.swift in Sources */,
 				A10000000000000000000004 /* PhotoThumbnail.swift in Sources */,
 				A10000000000000000000005 /* ContentView.swift in Sources */,
 				A10000000000000000000006 /* ReviewView.swift in Sources */,
